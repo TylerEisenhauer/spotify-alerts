@@ -62,7 +62,7 @@ async function processPlaylist(playlistId: string) {
                     .setColor('#E5A00D')
                     .setTitle(x.track.name)
                     .setURL(x.track.external_urls.spotify)
-                    .setDescription(x.track.artists.map(x => x.name).join())
+                    .setDescription(x.track.artists.map(x => x.name).join(', '))
                     .setAuthor({
                         name: `Track Added to ${list.name}`,
                         url: list.external_urls.spotify
