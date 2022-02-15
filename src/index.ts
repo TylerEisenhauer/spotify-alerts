@@ -12,7 +12,7 @@ connect(process.env.MONGO_CONNECTION)
 initializeApiClient()
 
 const minutes = 1
-const interval = minutes * 10 * 1000
+const interval = minutes * 60 * 1000
 const playlistCache = new NodeCache()
 
 const webhookClient = new WebhookClient({
@@ -51,7 +51,7 @@ async function processPlaylist(playlistId: string) {
             })
 
             await Playlist.updateOne({ _id: existingPlaylist._id }, { snapshot_id: list.snapshot_id, $push: { tracks: diff.map(x => x.track.id ? x.track.id : x.track.uri) } })
-            
+
             diff.forEach(async x => {
                 const max: number = Math.max(...x.track.album.images.map(x => x.height))
                 const largestImage: SpotifyImage = x.track.album.images.filter(x => x.height === max)[0]
