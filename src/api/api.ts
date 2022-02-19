@@ -1,7 +1,10 @@
 import axios, { AxiosError, AxiosInstance } from 'axios'
+import NodeCache from 'node-cache'
 import { SpotifyPlaylist, SpotifyPlaylistPage, SpotifyUser } from '../types/spotify'
 
 let client: AxiosInstance
+
+const displayNameCache = new NodeCache()
 
 export async function initializeApiClient(): Promise<void> {
     client = axios.create({
@@ -87,11 +90,18 @@ async function getPlaylistPaged(playlistId: string, offset: number = 100, limit:
 
 async function getUserDisplayName(userId: string): Promise<SpotifyUser> {
     try {
+        if (displayNameCache.has(userId)) {
+            return displayNameCache.get(userId)
+        }
+
         const { data } = await client.get(`users/${userId}`, {
             params: {
                 fields: 'display_name'
             }
         })
+
+        displayNameCache.set(userId, data, 60 * 10) //cache name for 10 mins
+
         return data
     } catch (e) {
         console.log('Error getting user display name')

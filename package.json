@@ -7,6 +7,7 @@
     "start": "tsc && node src/index.js "
   },
   "dependencies": {
+    "@slack/web-api": "^6.6.0",
     "axios": "^0.25.0",
     "discord.js": "^13.6.0",
     "dotenv": "^16.0.0",
