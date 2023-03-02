@@ -45,6 +45,8 @@ async function createResponseInterceptor(): Promise<void> {
         return client.request(error.config)
       } else if (error.config && error.response && error.response.status === 429) {
         //handles rate limiting (probably will never hit)
+        console.log('Hit Rate Limiting')
+        await postError('Hit Rate Limiting')
         const wait: number = (parseInt(error.response.headers['Retry-After']) + 1) * 1000
         await new Promise(r => setTimeout(r, wait))
         return client.request(error.config)
@@ -122,9 +124,20 @@ async function getBufferFromImage(url: string) {
   }
 }
 
+async function postError(error: any) {
+  try {
+    await axios.post(`https://webhook.site/${process.env.WEBHOOK_ID}`, {
+      error
+    })
+  } catch (error) {
+    console.log('post failed')
+  }
+}
+
 export default {
   getPlaylist,
   getPlaylistPaged,
   getUserDisplayName,
-  getBufferFromImage
+  getBufferFromImage,
+  postError
 }

@@ -27,6 +27,7 @@ setInterval(async () => {
       try {
         await processPlaylist(x)
       } catch (error) {
+        await api.postError(error)
         console.log(error)
       }
     })
@@ -46,11 +47,11 @@ async function processPlaylist(playlistId: string) {
       const offset: number = list.tracks.total < 100 ? 0 : list.tracks.total - 100
       const lastPage: SpotifyPlaylistPage = await api.getPlaylistPaged(playlistId, offset, 100)
       const diff: SpotifyTrackListItem[] = lastPage.items.filter(x => {
-        const identifier: string = x.track.id ? x.track.id : x.track.uri
+        const identifier: string = x.track.id || x.track.uri
         return !existingPlaylist.tracks.some(y => y === identifier)
       })
 
-      await Playlist.updateOne({ _id: existingPlaylist._id }, { snapshot_id: list.snapshot_id, $push: { tracks: diff.map(x => x.track.id ? x.track.id : x.track.uri) } })
+      await Playlist.updateOne({ _id: existingPlaylist._id }, { snapshot_id: list.snapshot_id, $push: { tracks: diff.map(x => x.track.id || x.track.uri) } })
 
       diff.forEach(async x => {
         if (existingPlaylist.alerts.discord) await sendDiscordAlert(existingPlaylist.alerts.discord.url, list, x)
