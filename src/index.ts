@@ -24,7 +24,11 @@ Playlist.find({}, 'id snapshot_id').then(x => {
 setInterval(async () => {
   try {
     playlistCache.keys().forEach(async x => {
-      await processPlaylist(x)
+      try {
+        await processPlaylist(x)
+      } catch (error) {
+        console.log(error)
+      }
     })
   } catch (e) {
     console.log(e.message)
@@ -77,36 +81,32 @@ async function processPlaylist(playlistId: string) {
 }
 
 async function sendDiscordAlert(url: string, list: SpotifyPlaylist, trackListItem: SpotifyTrackListItem) {
-  try {
-    const webhookClient = new WebhookClient({
-      url
+  const webhookClient = new WebhookClient({
+    url
+  })
+
+  const max: number = Math.max(...trackListItem.track.album.images.map(x => x.height))
+  const largestImage: SpotifyImage = trackListItem.track.album.images.filter(x => x.height === max)[0]
+  const buffer: Buffer = await api.getBufferFromImage(largestImage.url)
+  const attachment: AttachmentBuilder = new AttachmentBuilder(buffer).setName('img.jpeg')
+
+  const embed: EmbedBuilder = new EmbedBuilder()
+    .setColor('#E5A00D')
+    .setTitle(trackListItem.track.name)
+    .setURL(trackListItem.track.external_urls.spotify)
+    .setDescription(trackListItem.track.artists.map(x => x.name).join(', '))
+    .setAuthor({
+      name: `Track Added to ${list.name}`,
+      url: list.external_urls.spotify
     })
+    .addFields(
+      { name: 'Added By', value: (await api.getUserDisplayName(trackListItem.added_by.id)).display_name, inline: true },
+      { name: 'Added On', value: `<t:${+new Date(trackListItem.added_at) / 1000}:f>`, inline: true }
+    )
+    .setThumbnail('attachment://img.jpeg')
 
-    const max: number = Math.max(...trackListItem.track.album.images.map(x => x.height))
-    const largestImage: SpotifyImage = trackListItem.track.album.images.filter(x => x.height === max)[0]
-    const buffer: Buffer = await api.getBufferFromImage(largestImage.url)
-    const attachment: AttachmentBuilder = new AttachmentBuilder(buffer).setName('img.jpeg')
-
-    const embed: EmbedBuilder = new EmbedBuilder()
-      .setColor('#E5A00D')
-      .setTitle(trackListItem.track.name)
-      .setURL(trackListItem.track.external_urls.spotify)
-      .setDescription(trackListItem.track.artists.map(x => x.name).join(', '))
-      .setAuthor({
-        name: `Track Added to ${list.name}`,
-        url: list.external_urls.spotify
-      })
-      .addFields(
-        { name: 'Added By', value: (await api.getUserDisplayName(trackListItem.added_by.id)).display_name, inline: true },
-        { name: 'Added On', value: `<t:${+new Date(trackListItem.added_at) / 1000}:f>`, inline: true }
-      )
-      .setThumbnail('attachment://img.jpeg')
-
-    await webhookClient.send({
-      embeds: [embed],
-      files: [attachment]
-    })
-  } catch (error) {
-    console.log(error)
-  }
+  await webhookClient.send({
+    embeds: [embed],
+    files: [attachment]
+  })
 }
