@@ -71,7 +71,7 @@ async function processPlaylist(playlistId: string) {
     }
 
     await Playlist.updateOne({ _id: existingPlaylist._id }, { snapshot_id: list.snapshot_id, tracks })
-    
+
     playlistCache.set(list.id, list.snapshot_id)
   }
 }
