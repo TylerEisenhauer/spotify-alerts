@@ -15,6 +15,7 @@ export async function initializeApiClient(): Promise<void> {
   })
 
   await createResponseInterceptor()
+  await postError('hook is working')
 }
 
 async function getAccessToken(): Promise<string> {
