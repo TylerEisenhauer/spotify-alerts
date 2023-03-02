@@ -27,12 +27,11 @@ setInterval(async () => {
       try {
         await processPlaylist(x)
       } catch (error) {
-        await api.postError(error)
-        console.log(error)
+        handleError(error)
       }
     })
   } catch (e) {
-    console.log(e.message)
+    handleError(e)
   }
 }, interval)
 
@@ -110,4 +109,25 @@ async function sendDiscordAlert(url: string, list: SpotifyPlaylist, trackListIte
     embeds: [embed],
     files: [attachment]
   })
+}
+
+function handleError(error) {
+  if (error.response) {
+    console.log('--- Response Data ---')
+    console.log(error.response.data)
+    console.log('--- Response Headers ---')
+    console.log(error.response.headers)
+    console.log('--- Response Status ---')
+    console.log(error.response.status)
+  } else if (error.request) {
+    console.log('--- Request ---')
+    console.log(error.request)
+  } else {
+    console.log('Error', error)
+  }
+
+  if (error.config){
+    console.log('--- Error Config ---')
+    console.log(error.config)
+  }
 }
