@@ -91,7 +91,7 @@ async function sendDiscordAlert(url: string, list: SpotifyPlaylist, trackListIte
   const attachment: AttachmentBuilder = new AttachmentBuilder(buffer).setName('img.jpeg')
 
   const embed: EmbedBuilder = new EmbedBuilder()
-    .setColor('#E5A00D')
+    .setColor('#1DB954')
     .setTitle(trackListItem.track.name)
     .setURL(trackListItem.track.external_urls.spotify)
     .setDescription(trackListItem.track.artists.map(x => x.name).join(', '))
