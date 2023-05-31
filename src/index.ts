@@ -2,49 +2,54 @@ import { config } from 'dotenv'
 import { AttachmentBuilder, EmbedBuilder, WebhookClient } from 'discord.js'
 import NodeCache from 'node-cache'
 
-import api, { initializeApiClient } from './api/api'
+import { getBufferFromImage, getPlaylist, getPlaylistPaged, getUserDisplayName, initializeApiClient } from './api/api'
 import connect from './connect'
 import Playlist from './types/playlist'
 import { SpotifyImage, SpotifyPlaylist, SpotifyPlaylistPage, SpotifyTrackListItem } from './types/spotify'
+
+import cron from 'node-cron'
 
 config()
 connect(process.env.MONGO_CONNECTION)
 initializeApiClient()
 
-const minutes = 1
-const interval = minutes * 5 * 1000
 const playlistCache = new NodeCache()
+const tasks: Array<cron.ScheduledTask> = []
 
 Playlist.find({}, 'id snapshot_id').then(x => {
   x.forEach(y => {
     playlistCache.set(y.id, y.snapshot_id)
   })
+  initializeTasks()
 })
 
-setInterval(async () => {
+async function initializeTasks() {
   try {
     playlistCache.keys().forEach(async x => {
-      try {
-        await processPlaylist(x)
-      } catch (error) {
-        handleError(error)
-      }
+      const task = cron.schedule('*/10 * * * * *', async () => {
+        try {
+          await processPlaylist(x)
+        } catch (error) {
+          handleError(error)
+        }
+      })
+      tasks.push(task)
     })
   } catch (e) {
     handleError(e)
   }
-}, interval)
+}
 
 async function processPlaylist(playlistId: string) {
   const snapshotId = playlistCache.get(playlistId)
 
   if (snapshotId) {
-    const list: SpotifyPlaylist = await api.getPlaylist(playlistId)
+    const list: SpotifyPlaylist = await getPlaylist(playlistId)
 
     if (playlistCache.get(playlistId) !== list.snapshot_id) {
       const existingPlaylist = await Playlist.findOne({ id: playlistId })
       const offset: number = list.tracks.total < 100 ? 0 : list.tracks.total - 100
-      const lastPage: SpotifyPlaylistPage = await api.getPlaylistPaged(playlistId, offset, 100)
+      const lastPage: SpotifyPlaylistPage = await getPlaylistPaged(playlistId, offset, 100)
       const diff: SpotifyTrackListItem[] = lastPage.items.filter(x => {
         const identifier: string = x.track.id || x.track.uri
         return !existingPlaylist.tracks.some(y => y === identifier)
@@ -61,13 +66,13 @@ async function processPlaylist(playlistId: string) {
   } else {
     //initial load
     const existingPlaylist = await Playlist.findOne({ id: playlistId })
-    const list: SpotifyPlaylist = await api.getPlaylist(playlistId)
+    const list: SpotifyPlaylist = await getPlaylist(playlistId)
     const pages: number = list.tracks.total % list.tracks.limit ? Math.floor((list.tracks.total / list.tracks.limit) + 1) : (list.tracks.total / list.tracks.limit)
     const limit: number = list.tracks.limit
 
     let tracks: string[] = []
     for (let i = 0; i < pages; i++) {
-      const page: SpotifyPlaylistPage = await api.getPlaylistPaged(playlistId, i * limit, limit)
+      const page: SpotifyPlaylistPage = await getPlaylistPaged(playlistId, i * limit, limit)
 
       page.items.forEach(x => {
         tracks.push(x.track.id ? x.track.id : x.track.uri)
@@ -87,7 +92,7 @@ async function sendDiscordAlert(url: string, list: SpotifyPlaylist, trackListIte
 
   const max: number = Math.max(...trackListItem.track.album.images.map(x => x.height))
   const largestImage: SpotifyImage = trackListItem.track.album.images.filter(x => x.height === max)[0]
-  const buffer: Buffer = await api.getBufferFromImage(largestImage.url)
+  const buffer: Buffer = await getBufferFromImage(largestImage.url)
   const attachment: AttachmentBuilder = new AttachmentBuilder(buffer).setName('img.jpeg')
 
   const embed: EmbedBuilder = new EmbedBuilder()
@@ -100,7 +105,7 @@ async function sendDiscordAlert(url: string, list: SpotifyPlaylist, trackListIte
       url: list.external_urls.spotify
     })
     .addFields(
-      { name: 'Added By', value: (await api.getUserDisplayName(trackListItem.added_by.id)).display_name, inline: true },
+      { name: 'Added By', value: (await getUserDisplayName(trackListItem.added_by.id)).display_name, inline: true },
       { name: 'Added On', value: `<t:${+new Date(trackListItem.added_at) / 1000}:f>`, inline: true }
     )
     .setThumbnail('attachment://img.jpeg')
@@ -126,7 +131,7 @@ function handleError(error) {
     console.log('Error', error)
   }
 
-  if (error.config){
+  if (error.config) {
     console.log('--- Error Config ---')
     console.log(error.config)
   }

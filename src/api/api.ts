@@ -6,7 +6,7 @@ let client: AxiosInstance
 
 const displayNameCache = new NodeCache()
 
-export async function initializeApiClient(): Promise<void> {
+async function initializeApiClient(): Promise<void> {
   client = axios.create({
     baseURL: 'https://api.spotify.com/v1/',
     headers: {
@@ -123,7 +123,8 @@ async function getBufferFromImage(url: string) {
   }
 }
 
-export default {
+export {
+  initializeApiClient,
   getPlaylist,
   getPlaylistPaged,
   getUserDisplayName,
