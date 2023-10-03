@@ -68,7 +68,7 @@ async function getPlaylist(playlistId: string): Promise<SpotifyPlaylist> {
   try {
     const { data } = await client.get(`playlists/${playlistId}`, {
       params: {
-        fields: 'external_urls,name,snapshot_id,id,tracks(limit,next,offset,previous,total,items(added_at,added_by(id),track(id,name,album(name,images),artists(external_urls,name),external_urls,uri)))'
+        fields: 'external_urls,name,snapshot_id,id,tracks(limit,next,offset,previous,total)'//,items(added_at,added_by(id),track(id,name,album(name,images),artists(external_urls,name),external_urls,uri)))'
       },
     })
     return data

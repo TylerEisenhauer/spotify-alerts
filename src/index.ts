@@ -65,8 +65,9 @@ async function processPlaylist(playlistId: string, snapshotId: string): Promise<
 
     if (snapshotId !== list.snapshot_id) {
       const existingPlaylist = await Playlist.findOne({ id: playlistId })
-      const offset: number = list.tracks.total < 100 ? 0 : list.tracks.total - 100
-      const lastPage: SpotifyPlaylistPage = await getPlaylistPaged(playlistId, offset, 100)
+      const limit: number = list.tracks.limit
+      const offset: number = list.tracks.total < limit ? 0 : list.tracks.total - limit
+      const lastPage: SpotifyPlaylistPage = await getPlaylistPaged(playlistId, offset, limit)
       const diff: SpotifyTrackListItem[] = lastPage.items.filter(x => {
         const identifier: string = x.track.id || x.track.uri
         return !existingPlaylist.tracks.some(y => y === identifier)
