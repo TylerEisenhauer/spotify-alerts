@@ -3,47 +3,51 @@ import NodeCache from 'node-cache'
 import { SpotifyPlaylist, SpotifyPlaylistPage, SpotifyUser } from '../types/spotify'
 
 let client: AxiosInstance
+const tokenCache: NodeCache = new NodeCache()
 
 const displayNameCache = new NodeCache()
 
 async function initializeApiClient(): Promise<void> {
   client = axios.create({
     baseURL: 'https://api.spotify.com/v1/',
-    headers: {
-      Authorization: await getAccessToken()
-    }
   })
-
+  await createRequestInterceptor()
   await createResponseInterceptor()
 }
 
 async function getAccessToken(): Promise<string> {
-  const { data } = await axios.post('https://accounts.spotify.com/api/token', null, {
-    auth: {
-      username: process.env.CLIENT_ID,
-      password: process.env.CLIENT_SECRET
-    },
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    params: {
-      grant_type: 'client_credentials'
-    }
-  })
+  if (!tokenCache.has('token')) {
+    const { data } = await axios.post('https://accounts.spotify.com/api/token', null, {
+      auth: {
+        username: process.env.CLIENT_ID,
+        password: process.env.CLIENT_SECRET
+      },
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      params: {
+        grant_type: 'client_credentials'
+      }
+    })
 
-  return `Bearer ${data.access_token}`
+    tokenCache.set('token', `${data.token_type} ${data.access_token}`, data.expires_in - 300) //expire the token 5 mins early to force a refresh
+  }
+
+  return `${tokenCache.get('token')}`
+}
+
+async function createRequestInterceptor(): Promise<void> {
+  const interceptor: number = client.interceptors.request.use(async config => {
+    const token = await getAccessToken()
+    config.headers.Authorization = token
+    return config
+  }, error => Promise.reject(error))
 }
 
 async function createResponseInterceptor(): Promise<void> {
   const interceptor: number = client.interceptors.response.use(null, async (error) => {
     try {
-      client.interceptors.response.eject(interceptor) //recreated in finally block
-      if (error.config && error.response && error.response.status === 401) {
-        const token: string = await getAccessToken()
-        Object.assign(client.defaults.headers, { Authorization: token })
-        Object.assign(error.config.headers, { Authorization: token })
-        return client.request(error.config)
-      } else if (error.config && error.response && error.response.status === 429) {
+      if (error.config && error.response && error.response.status === 429) {
         //handles rate limiting
         console.log('Hit Rate Limiting')
         const wait: number = (parseInt(error.response.headers['retry-after']) + 1) * 1000
@@ -55,8 +59,6 @@ async function createResponseInterceptor(): Promise<void> {
       }
     } catch {
       return Promise.reject(error)
-    } finally {
-      await createResponseInterceptor()
     }
     throw error
   })
@@ -121,7 +123,7 @@ async function getBufferFromImage(url: string) {
     const buffer = Buffer.from(data, 'utf-8')
     return buffer
   } catch (e) {
-    console.log('Error getting user display name')
+    console.log('Error getting buffer from image')
     throw e
   }
 }
