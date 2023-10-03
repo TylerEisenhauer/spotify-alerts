@@ -46,10 +46,11 @@ async function createResponseInterceptor(): Promise<void> {
       } else if (error.config && error.response && error.response.status === 429) {
         //handles rate limiting
         console.log('Hit Rate Limiting')
-        console.log('--- Response Headers ---')
-        console.log(error.response.headers)
-        const wait: number = (parseInt(error.response.headers['Retry-After']) + 1) * 1000
+        const wait: number = (parseInt(error.response.headers['retry-after']) + 1) * 1000
+        console.log(`Waiting ${error.response.headers['retry-after']} seconds, ${wait} milliseconds to retry`)
         await new Promise(r => setTimeout(r, wait))
+        console.log(`Waiting done`)
+
         return client.request(error.config)
       }
     } catch {
@@ -66,7 +67,7 @@ async function getPlaylist(playlistId: string): Promise<SpotifyPlaylist> {
     const { data } = await client.get(`playlists/${playlistId}`, {
       params: {
         fields: 'external_urls,name,snapshot_id,id,tracks(limit,next,offset,previous,total,items(added_at,added_by(id),track(id,name,album(name,images),artists(external_urls,name),external_urls,uri)))'
-      }
+      },
     })
     return data
   } catch (e) {

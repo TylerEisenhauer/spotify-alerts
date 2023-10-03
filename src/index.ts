@@ -34,6 +34,11 @@ async function initializeTasks() {
         const { snapshotId, processing } = playlistCache.get(playlistId) as CacheKey
         if (processing) return
 
+        playlistCache.set(playlistId, {
+          snapshotId,
+          processing: true
+        })
+
         let newSnapshotId: string = snapshotId
         try {
           newSnapshotId = await processPlaylist(playlistId, snapshotId)
