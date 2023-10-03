@@ -8,4 +8,6 @@ RUN yarn install
 
 COPY . /app
 
-CMD ["yarn", "start"]
+RUN yarn tsc
+
+CMD ["node", "src/index.js"]
