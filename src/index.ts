@@ -30,7 +30,7 @@ Playlist.find({}, 'id snapshot_id').then(x => {
 async function initializeTasks() {
   try {
     playlistCache.keys().forEach(async playlistId => {
-      const task = cron.schedule('*/10 * * * * *', async () => {
+      const task = cron.schedule('* * * * *', async () => {
         const { snapshotId, processing } = playlistCache.get(playlistId) as CacheKey
         if (processing) return
 
