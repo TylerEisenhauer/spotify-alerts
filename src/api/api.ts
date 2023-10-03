@@ -44,8 +44,10 @@ async function createResponseInterceptor(): Promise<void> {
         Object.assign(error.config.headers, { Authorization: token })
         return client.request(error.config)
       } else if (error.config && error.response && error.response.status === 429) {
-        //handles rate limiting (probably will never hit)
+        //handles rate limiting
         console.log('Hit Rate Limiting')
+        console.log('--- Response Headers ---')
+        console.log(error.response.headers)
         const wait: number = (parseInt(error.response.headers['Retry-After']) + 1) * 1000
         await new Promise(r => setTimeout(r, wait))
         return client.request(error.config)

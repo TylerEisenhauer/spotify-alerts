@@ -4,6 +4,7 @@ import NodeCache from 'node-cache'
 
 import { getBufferFromImage, getPlaylist, getPlaylistPaged, getUserDisplayName, initializeApiClient } from './api/api'
 import connect from './connect'
+import { CacheKey } from './types/cache'
 import Playlist from './types/playlist'
 import { SpotifyImage, SpotifyPlaylist, SpotifyPlaylistPage, SpotifyTrackListItem } from './types/spotify'
 
@@ -18,35 +19,46 @@ const tasks: Array<cron.ScheduledTask> = []
 
 Playlist.find({}, 'id snapshot_id').then(x => {
   x.forEach(y => {
-    playlistCache.set(y.id, y.snapshot_id)
+    playlistCache.set(y.id, {
+      snapshotId: y.snapshot_id,
+      processing: false
+    } as CacheKey)
   })
   initializeTasks()
 })
 
 async function initializeTasks() {
   try {
-    playlistCache.keys().forEach(async x => {
+    playlistCache.keys().forEach(async playlistId => {
       const task = cron.schedule('*/10 * * * * *', async () => {
+        const { snapshotId, processing } = playlistCache.get(playlistId) as CacheKey
+        if (processing) return
+
+        let newSnapshotId: string = snapshotId
         try {
-          await processPlaylist(x)
+          newSnapshotId = await processPlaylist(playlistId, snapshotId)
         } catch (error) {
           handleError(error)
+        } finally {
+          playlistCache.set(playlistId, {
+            snapshotId: newSnapshotId,
+            processing: false
+          })
         }
       })
       tasks.push(task)
     })
   } catch (e) {
+    console.error('Hit global error handler, uh oh')
     handleError(e)
   }
 }
 
-async function processPlaylist(playlistId: string) {
-  const snapshotId = playlistCache.get(playlistId)
-
+async function processPlaylist(playlistId: string, snapshotId: string): Promise<string> {
   if (snapshotId) {
     const list: SpotifyPlaylist = await getPlaylist(playlistId)
 
-    if (playlistCache.get(playlistId) !== list.snapshot_id) {
+    if (snapshotId !== list.snapshot_id) {
       const existingPlaylist = await Playlist.findOne({ id: playlistId })
       const offset: number = list.tracks.total < 100 ? 0 : list.tracks.total - 100
       const lastPage: SpotifyPlaylistPage = await getPlaylistPaged(playlistId, offset, 100)
@@ -61,7 +73,7 @@ async function processPlaylist(playlistId: string) {
         if (existingPlaylist.alerts.discord) await sendDiscordAlert(existingPlaylist.alerts.discord.url, list, x)
       })
 
-      playlistCache.set(list.id, list.snapshot_id)
+      return list.snapshot_id
     }
   } else {
     //initial load
@@ -81,8 +93,10 @@ async function processPlaylist(playlistId: string) {
 
     await Playlist.updateOne({ _id: existingPlaylist._id }, { snapshot_id: list.snapshot_id, tracks })
 
-    playlistCache.set(list.id, list.snapshot_id)
+    return list.snapshot_id
   }
+
+  return snapshotId
 }
 
 async function sendDiscordAlert(url: string, list: SpotifyPlaylist, trackListItem: SpotifyTrackListItem) {
