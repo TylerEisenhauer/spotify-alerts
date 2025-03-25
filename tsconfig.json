@@ -1,8 +1,16 @@
 {
   "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
     "esModuleInterop": true,
+    "tsBuildInfoFile": "dist/tsconfig.app.tsbuildinfo",
     "module": "commonjs",
-    "target": "es6",
-    "sourceMap": true
-  }
+    "target": "es2022",
+    "sourceMap": true,
+    "skipLibCheck": true,
+    "strict": false
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
 }

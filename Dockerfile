@@ -15,7 +15,7 @@ RUN yarn tsc
 #Run
 FROM gcr.io/distroless/nodejs22-debian12 AS run
 
-COPY --from=build /app /app
+COPY --from=build /app/dist /app
 
 ENV NODE_ENV=production
 
