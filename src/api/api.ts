@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from 'axios'
 import NodeCache from 'node-cache'
-import { SpotifyPlaylist, SpotifyPlaylistPage, SpotifyUser } from '../types/spotify'
+import { SpotifyPlaylist, SpotifyPlaylistPage, SpotifyUser } from '../types/spotify.js'
 
 let client: AxiosInstance
 const tokenCache: NodeCache = new NodeCache()

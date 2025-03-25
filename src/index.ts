@@ -2,11 +2,11 @@ import { config } from 'dotenv'
 import { AttachmentBuilder, EmbedBuilder, WebhookClient } from 'discord.js'
 import NodeCache from 'node-cache'
 
-import { getBufferFromImage, getPlaylist, getPlaylistPaged, getUserDisplayName, initializeApiClient } from './api/api'
-import connect from './connect'
-import { CacheKey } from './types/cache'
-import Playlist from './types/playlist'
-import { SpotifyImage, SpotifyPlaylist, SpotifyPlaylistPage, SpotifyTrackListItem } from './types/spotify'
+import { getBufferFromImage, getPlaylist, getPlaylistPaged, getUserDisplayName, initializeApiClient } from './api/api.js'
+import connect from './connect.js'
+import { CacheKey } from './types/cache.js'
+import Playlist from './types/playlist.js'
+import { SpotifyImage, SpotifyPlaylist, SpotifyPlaylistPage, SpotifyTrackListItem } from './types/spotify.js'
 
 import cron from 'node-cron'
 
